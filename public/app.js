@@ -654,7 +654,12 @@ window.addEventListener('pageshow', (event) => {
 
 
 // Opstarten
-let cachedWindowH = window.innerHeight;
+let cachedWindowH = window.visualViewport?.height || window.clientHeight || 800;
+
+requestAnimationFrame(() => {
+    cachedWindowH = window.innerHeight;
+});
+
 window.addEventListener('resize', () => {
     cachedWindowH = window.innerHeight;
 }, { passive: true });
