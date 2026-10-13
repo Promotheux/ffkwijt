@@ -149,7 +149,6 @@ function applyTransforms(deltaY) {
         effectiveDeltaY = deltaY * 0.25;
     }
 
-    // Gebruik de gecachete hoogte i.p.v. window.innerHeight direct opvragen
     const windowH = cachedWindowH;
     const progress = Math.min(Math.abs(effectiveDeltaY) / (windowH * 0.75), 1);
 
@@ -158,23 +157,29 @@ function applyTransforms(deltaY) {
         feedLoader.style.opacity = `${Math.min(Math.max(deltaY, 0) / 70, 1)}`;
     }
 
-    const cameraScale = (1 - (progress * 0.08)).toFixed(4);
-    viewport.style.transform = `scale(${cameraScale})`;
+    // Alleen schalen tijdens actieve drag; in ruststand exact 'none' zodat tekst 100% scherp blijft
+    if (effectiveDeltaY === 0) {
+        viewport.style.transform = 'none';
+    } else {
+        const cameraScale = (1 - (progress * 0.08)).toFixed(4);
+        viewport.style.transform = `scale(${cameraScale})`;
+    }
 
+    const roundedY = Math.round(effectiveDeltaY);
     const currAngle = parseFloat(currentCard.dataset.baseAngle || 0);
-    currentCard.style.transform = `translate3d(0, ${effectiveDeltaY}px, 0) rotate(${currAngle}deg)`;
+    currentCard.style.transform = `translate3d(0, ${roundedY}px, 0) rotate(${currAngle}deg)`;
     currentCard.style.opacity = `${(1 - (progress * 0.35)).toFixed(3)}`;
 
     if (FEED.length > 1) {
         const nextAngle = parseFloat(nextCard.dataset.baseAngle || 0);
-        const nextY = (windowH * 0.86) + effectiveDeltaY;
+        const nextY = Math.round((windowH * 0.86) + effectiveDeltaY);
         nextCard.style.transform = `translate3d(0, ${Math.max(nextY, 0)}px, 0) rotate(${nextAngle}deg)`;
         nextCard.style.opacity = effectiveDeltaY < 0 ? `${(0.2 + (progress * 0.8)).toFixed(3)}` : '0';
     }
 
     if (currentIndex > 0) {
         const prevAngle = parseFloat(prevCard.dataset.baseAngle || 0);
-        const prevY = (-windowH * 0.86) + effectiveDeltaY;
+        const prevY = Math.round((-windowH * 0.86) + effectiveDeltaY);
         prevCard.style.transform = `translate3d(0, ${Math.min(prevY, 0)}px, 0) rotate(${prevAngle}deg)`;
         prevCard.style.opacity = effectiveDeltaY > 0 ? `${(0.2 + (progress * 0.8)).toFixed(3)}` : '0';
     }
@@ -200,7 +205,7 @@ async function completeTransition(direction) {
     applyTransforms(dragY);
 
     isAnimating = true;
-    const windowH = window.innerHeight;
+    const windowH = cachedWindowH;
     const duration = 380;
     const ease = 'cubic-bezier(0.22, 1, 0.36, 1)';
 
@@ -209,9 +214,11 @@ async function completeTransition(direction) {
     prevCard.style.transition = `transform ${duration}ms ${ease}, opacity ${duration}ms ease`;
     viewport.style.transition = `transform ${duration}ms ${ease}`;
 
+    const targetYOut = Math.round(windowH * 0.95);
+
     if (direction === 1) {
         const currAngle = parseFloat(currentCard.dataset.baseAngle || 0);
-        currentCard.style.transform = `translate3d(0, ${-windowH * 0.95}px, 0) rotate(${currAngle}deg)`;
+        currentCard.style.transform = `translate3d(0, ${-targetYOut}px, 0) rotate(${currAngle}deg)`;
         currentCard.style.opacity = '0';
 
         const nextAngle = parseFloat(nextCard.dataset.baseAngle || 0);
@@ -219,7 +226,7 @@ async function completeTransition(direction) {
         nextCard.style.opacity = '1';
     } else {
         const currAngle = parseFloat(currentCard.dataset.baseAngle || 0);
-        currentCard.style.transform = `translate3d(0, ${windowH * 0.95}px, 0) rotate(${currAngle}deg)`;
+        currentCard.style.transform = `translate3d(0, ${targetYOut}px, 0) rotate(${currAngle}deg)`;
         currentCard.style.opacity = '0';
 
         const prevAngle = parseFloat(prevCard.dataset.baseAngle || 0);
@@ -227,7 +234,7 @@ async function completeTransition(direction) {
         prevCard.style.opacity = '1';
     }
 
-    viewport.style.transform = `scale(1)`;
+    viewport.style.transform = 'none';
 
     setTimeout(() => {
         currentCard.style.transition = '';
