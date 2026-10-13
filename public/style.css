@@ -243,6 +243,10 @@ body {
     border-radius: 2px;
     will-change: transform, opacity;
     touch-action: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    backface-visibility: hidden;
+    transform-style: flat;
     box-shadow:
         0 3px 6px rgba(45, 35, 20, 0.04),
         0 16px 36px -8px rgba(45, 35, 20, 0.14),
@@ -513,7 +517,7 @@ body {
     transition: opacity 0.25s ease;
 }
 
-/* 113 Crisis Modal (Japandi stijl) */
+/* 113 Crisis Modal */
 .crisis-overlay {
     position: fixed;
     inset: 0;
@@ -751,8 +755,7 @@ body.info-page {
     text-decoration: none;
 }
 
-.info-back,
-.info-footer {
+.info-back {
     font-size: 0.8125rem;
 }
 
@@ -807,5 +810,35 @@ body.info-page {
 }
 
 .info-footer {
-    padding-block: 16px 40px;
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 32px);
+    border-top: 1px solid rgba(60, 50, 40, 0.14);
+    font-size: 0.85rem;
+    color: #666;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    line-height: 1.4;
+}
+
+.info-footer a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.info-footer a:hover {
+    color: #111;
+}
+
+.info-footer-divider {
+    color: #bbb;
+    user-select: none;
+}
+
+.info-footer-meta {
+    color: #777;
 }
