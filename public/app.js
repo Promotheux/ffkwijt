@@ -143,19 +143,20 @@ function initCards() {
 function applyTransforms(deltaY) {
     if (isWriting) return;
 
-    if (!isRefreshing) {
-        feedLoader.hidden = !(currentIndex === 0 && deltaY > 8);
-        feedLoader.style.opacity = `${Math.min(Math.max(deltaY, 0) / 70, 1)}`;
-    }
-
     let effectiveDeltaY = deltaY;
     if ((currentIndex === 0 && deltaY > 0) ||
         (currentIndex >= FEED.length - 1 && deltaY < 0 && (hasMoreFeed || FEED.length <= 1))) {
         effectiveDeltaY = deltaY * 0.25;
     }
 
-    const windowH = window.innerHeight;
+    // Gebruik de gecachete hoogte i.p.v. window.innerHeight direct opvragen
+    const windowH = cachedWindowH;
     const progress = Math.min(Math.abs(effectiveDeltaY) / (windowH * 0.75), 1);
+
+    if (!isRefreshing) {
+        feedLoader.hidden = !(currentIndex === 0 && deltaY > 8);
+        feedLoader.style.opacity = `${Math.min(Math.max(deltaY, 0) / 70, 1)}`;
+    }
 
     const cameraScale = (1 - (progress * 0.08)).toFixed(4);
     viewport.style.transform = `scale(${cameraScale})`;
@@ -650,7 +651,14 @@ window.addEventListener('pageshow', (event) => {
     if (event.persisted) handleHistoryReturn();
 });
 
+
+
 // Opstarten
+let cachedWindowH = window.innerHeight;
+window.addEventListener('resize', () => {
+    cachedWindowH = window.innerHeight;
+}, { passive: true });
+
 const isHistoryReturn = performance.getEntriesByType('navigation')[0]?.type === 'back_forward';
 if (!isHistoryReturn) sessionStorage.removeItem('ffkwijt_left');
 if (!isHistoryReturn || !handleHistoryReturn()) {
@@ -659,3 +667,4 @@ if (!isHistoryReturn || !handleHistoryReturn()) {
         setupSSE();
     });
 }
+
