@@ -23,7 +23,8 @@
     
     
     <!-- Preload core styles & script -->
-    <link rel="preload" href="/style.css?v=20cd80e" as="style">
+    <link rel="preload" href="/style.css?v=20cd80e" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="/style.css?v=20cd80e"></noscript>
     <link rel="preload" href="/app.js?v=20cd80e" as="script">
 
     <!-- Stylesheet -->

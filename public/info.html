@@ -21,7 +21,8 @@
     <link rel="preload" href="/fonts/newsreader-400.ttf" as="font" type="font/ttf" crossorigin>
 
     <!-- Preload core styles -->
-    <link rel="preload" href="/style.css?v=20cd80e" as="style">
+    <link rel="preload" href="/style.css?v=20cd80e" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="/style.css?v=20cd80e"></noscript>
 
     <!-- Stylesheet -->
     <link rel="stylesheet" href="/style.css?v=20cd80e">
