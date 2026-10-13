@@ -55,7 +55,14 @@ pub async fn init_db(database_url: &str) -> Result<DbPool, sqlx::Error> {
             created_at TIMESTAMPTZ DEFAULT NOW(),
             reviewed_at TIMESTAMPTZ
         );
+        "#,
+    )
+    .execute(&pool)
+    .await?;
 
+    // 4. composite index
+    sqlx::query(
+        r#"
         CREATE INDEX IF NOT EXISTS idx_notes_moderation_created_at
         ON notes (moderation_status, created_at DESC);
         "#,
