@@ -1,0 +1,76 @@
+# ==========================================
+# Rust & Cargo
+# ==========================================
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# ==========================================
+# Environment & Secrets (Cruciaal voor privacy/prod)
+# ==========================================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+
+# ==========================================
+# Python & Virtual Environments (Fine-tuning pipeline)
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# ==========================================
+# Machine Learning & Checkpoints
+# ==========================================
+# Grote weights en tijdelijke trainingsdata nooit in git
+checkpoints/
+temp_finetuned_pytorch/
+models/*.onnx
+models/*.bin
+models/*.safetensors
+models/*.pt
+models/*.pth
+wandb/
+
+# ==========================================
+# Datasets & Export Data (Privacy / AVG)
+# ==========================================
+# Bescherm gebruikersdata en geëxporteerde notes tegen publicatie
+*.jsonl
+*.csv
+!dataset_template.jsonl
+moderated_notes.*
+distillation_dataset*
+
+# ==========================================
+# Docker & Database local data
+# ==========================================
+postgres_data/
+docker-compose.override.yml
+
+# ==========================================
+# OS & Editor Metadata
+# ==========================================
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# ==========================================
+# Logs
+# ==========================================
+*.log
+logs/

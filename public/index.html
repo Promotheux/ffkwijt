@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="nl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>ffkwijt — Anoniem van je afschrijven</title>
+    <meta name="description" content="Een anonieme, serene plek om je gedachten, frustraties en piekers van je af te schrijven zonder oordeel of likes.">
+    <link rel="canonical" href="https://ffkwijt.nl/">
+
+    <!-- Open Graph / Social sharing -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://ffkwijt.nl/">
+    <meta property="og:title" content="ffkwijt — Anoniem van je afschrijven">
+    <meta property="og:description" content="Even je ei kwijt. Schrijf anoniem van je af op een digitaal prikbord zonder algoritmes of oordelen.">
+    <meta property="og:locale" content="nl_NL">
+
+    <!-- Preload fonts (voorkomt render-blocking en layout shifts) -->
+    <!-- Pas de paden/namen aan naar de daadwerkelijke bestandsnaam in je assets-map -->
+    <link rel="preload" href="/fonts/inter-var.woff2" as="font" type="font/woff2" crossorigin>
+
+    <!-- Preload core styles & script -->
+    <link rel="preload" href="/style.css" as="style">
+    <link rel="preload" href="/app.js" as="script">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="/style.css">
+    
+    <!-- Scripts -->
+    <script src="/app.js" defer></script>
+</head>
+
+<body>
+
+    <header class="top-bar">
+        <a href="/info.html" class="info-link" aria-label="Over ffkwijt en je privacy" title="Over ffkwijt en je privacy">
+            <svg class="lucide lucide-info" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 16v-4" />
+                <path d="M12 8h.01" />
+            </svg>
+        </a>
+        <button id="write-toggle" class="write-toggle-btn" aria-label="Schrijf een anonieme gedachte">ik moet <span
+                class="brand-accent">ff</span> wat kwijt</button>
+    </header>
+
+    <!-- Ambient Out-of-Focus Prikbord Achtergrond -->
+    <div class="ambient-board" aria-hidden="true">
+        <div class="ambient-note an-top-left"><div class="ambient-tape"></div><div class="blur-line" style="width: 82%;"></div><div class="blur-line" style="width: 94%;"></div><div class="blur-line" style="width: 58%;"></div></div>
+        <div class="ambient-note an-top-right"><div class="ambient-tape"></div><div class="blur-line" style="width: 90%;"></div><div class="blur-line" style="width: 72%;"></div><div class="blur-line" style="width: 85%;"></div></div>
+        <div class="ambient-note an-bottom-left"><div class="ambient-tape"></div><div class="blur-line" style="width: 78%;"></div><div class="blur-line" style="width: 88%;"></div><div class="blur-line" style="width: 60%;"></div></div>
+        <div class="ambient-note an-bottom-right"><div class="ambient-tape"></div><div class="blur-line" style="width: 86%;"></div><div class="blur-line" style="width: 68%;"></div><div class="blur-line" style="width: 92%;"></div></div>
+
+        <div class="ambient-note an-mid-left desktop-only"><div class="ambient-tape"></div><div class="blur-line" style="width: 70%;"></div><div class="blur-line" style="width: 85%;"></div></div>
+        <div class="ambient-note an-mid-right desktop-only"><div class="ambient-tape"></div><div class="blur-line" style="width: 88%;"></div><div class="blur-line" style="width: 76%;"></div></div>
+        <div class="ambient-note an-top-center desktop-only"><div class="ambient-tape"></div><div class="blur-line" style="width: 65%;"></div><div class="blur-line" style="width: 80%;"></div></div>
+        <div class="ambient-note an-bottom-center desktop-only"><div class="ambient-tape"></div><div class="blur-line" style="width: 75%;"></div><div class="blur-line" style="width: 90%;"></div></div>
+    </div>
+
+    <!-- Viewport Stage -->
+    <main class="viewport" id="viewport">
+
+        <!-- Vorige kaart -->
+        <article id="prev-card" class="note-card" aria-hidden="true">
+            <div class="note-tape"><span class="tape-brand"><span class="brand-accent">ff</span>kwijt</span></div>
+            <p id="prev-text" class="note-content"></p>
+            <footer class="note-footer">
+                <button class="hold-trigger" aria-label="Draag deze gedachte mee">
+                    <svg viewBox="0 0 512 512" preserveAspectRatio="xMidYMid meet">
+                        <g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)" stroke="none">
+                            <path
+                                d="M1313 4959 c-355 -40 -657 -189 -905 -447 -197 -206 -317 -435 -380 -726 -31 -146 -31 -427 0 -572 59 -274 172 -497 356 -707 l78 -87 -37 -42 c-145 -170 -150 -437 -11 -632 73 -102 180 -170 316 -200 22 -5 25 -11 27 -58 11 -254 202 -457 464 -492 l46 -7 11 -62 c33 -174 176 -333 351 -388 60 -19 168 -26 259 -16 19 2 26 -7 46 -55 90 -221 340 -353 573 -305 130 28 174 56 329 211 159 159 196 218 218 347 l12 74 58 7 c87 11 195 68 271 142 75 74 130 178 148 279 l10 64 69 11 c129 22 256 105 332 215 45 65 86 173 86 226 0 42 11 51 59 51 36 0 133 34 185 64 63 37 130 100 170 160 44 66 86 189 86 252 0 47 0 47 133 183 237 243 361 473 423 786 25 125 25 405 0 530 -61 309 -189 550 -410 771 -180 179 -347 283 -579 359 -299 97 -638 93 -938 -11 -198 -69 -378 -177 -524 -316 l-85 -80 -83 79 c-257 243 -593 382 -957 397 -69 2 -162 0 -207 -5z m2542 -335 c418 -80 779 -412 900 -829 70 -244 49 -517 -61 -753 -46 -100 -147 -251 -222 -332 l-61 -65 -613 612 -613 612 -85 -81 c-165 -158 -328 -194 -507 -113 -31 14 -83 54 -130 99 l-78 75 210 211 c305 306 409 391 589 476 217 102 439 132 671 88z m-2225 1 c166 -25 294 -70 430 -151 79 -47 233 -172 254 -206 9 -15 -19 -48 -192 -221 l-203 -203 173 -170 c198 -195 254 -242 351 -291 198 -99 459 -99 658 1 l67 33 511 -511 c281 -281 515 -524 521 -539 53 -143 -75 -285 -221 -247 -39 10 -85 53 -424 391 -209 208 -385 379 -390 379 -13 0 -225 -212 -225 -225 0 -5 171 -181 379 -390 339 -340 381 -385 391 -424 21 -80 -10 -159 -79 -202 -49 -31 -114 -38 -168 -19 -15 6 -200 183 -410 393 l-383 382 -117 -118 -118 -117 382 -383 c210 -210 387 -395 393 -410 40 -109 -32 -235 -146 -253 -58 -9 -102 8 -176 68 -125 99 -232 134 -385 124 -70 -4 -93 -2 -93 7 0 29 -61 136 -106 186 -88 98 -232 171 -338 171 l-42 0 -11 63 c-27 157 -137 298 -293 373 -27 13 -68 27 -90 30 -23 4 -43 12 -45 18 -1 6 -8 49 -14 96 -43 331 -411 542 -707 406 l-53 -24 -69 73 c-371 390 -416 1007 -106 1442 251 351 675 533 1094 468z m-602 -2260 c49 -21 81 -52 103 -100 41 -89 19 -148 -99 -268 -100 -102 -142 -127 -209 -127 -136 0 -223 141 -164 263 28 58 197 223 242 236 50 14 85 13 127 -4z m460 -549 c31 -16 74 -61 91 -94 18 -33 15 -115 -4 -155 -26 -56 -204 -223 -251 -236 -54 -15 -83 -13 -129 8 -85 38 -126 123 -104 214 10 42 25 64 93 135 107 112 154 142 223 142 30 0 66 -6 81 -14z m520 -484 c63 -29 109 -121 96 -193 -10 -53 -36 -89 -137 -186 -106 -103 -152 -123 -230 -102 -89 23 -137 86 -137 179 0 68 18 100 109 193 129 133 194 157 299 109z m649 -378 c21 -17 46 -46 55 -65 20 -38 23 -113 8 -155 -16 -41 -189 -214 -235 -235 -94 -44 -201 -2 -246 96 -40 87 -20 144 94 262 108 112 150 136 229 130 46 -2 66 -10 95 -33z" />
+                        </g>
+                    </svg>
+                </button>
+            </footer>
+        </article>
+
+        <!-- Huidige actieve kaart -->
+        <article id="current-card" class="note-card">
+            <div class="note-tape"><span class="tape-brand"><span class="brand-accent">ff</span>kwijt</span></div>
+            <p id="current-text" class="note-content"></p>
+            <footer class="note-footer">
+                <button class="hold-trigger" aria-label="Draag deze gedachte mee">
+                    <svg viewBox="0 0 512 512" preserveAspectRatio="xMidYMid meet">
+                        <g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)" stroke="none">
+                            <path
+                                d="M1313 4959 c-355 -40 -657 -189 -905 -447 -197 -206 -317 -435 -380 -726 -31 -146 -31 -427 0 -572 59 -274 172 -497 356 -707 l78 -87 -37 -42 c-145 -170 -150 -437 -11 -632 73 -102 180 -170 316 -200 22 -5 25 -11 27 -58 11 -254 202 -457 464 -492 l46 -7 11 -62 c33 -174 176 -333 351 -388 60 -19 168 -26 259 -16 19 2 26 -7 46 -55 90 -221 340 -353 573 -305 130 28 174 56 329 211 159 159 196 218 218 347 l12 74 58 7 c87 11 195 68 271 142 75 74 130 178 148 279 l10 64 69 11 c129 22 256 105 332 215 45 65 86 173 86 226 0 42 11 51 59 51 36 0 133 34 185 64 63 37 130 100 170 160 44 66 86 189 86 252 0 47 0 47 133 183 237 243 361 473 423 786 25 125 25 405 0 530 -61 309 -189 550 -410 771 -180 179 -347 283 -579 359 -299 97 -638 93 -938 -11 -198 -69 -378 -177 -524 -316 l-85 -80 -83 79 c-257 243 -593 382 -957 397 -69 2 -162 0 -207 -5z m2542 -335 c418 -80 779 -412 900 -829 70 -244 49 -517 -61 -753 -46 -100 -147 -251 -222 -332 l-61 -65 -613 612 -613 612 -85 -81 c-165 -158 -328 -194 -507 -113 -31 14 -83 54 -130 99 l-78 75 210 211 c305 306 409 391 589 476 217 102 439 132 671 88z m-2225 1 c166 -25 294 -70 430 -151 79 -47 233 -172 254 -206 9 -15 -19 -48 -192 -221 l-203 -203 173 -170 c198 -195 254 -242 351 -291 198 -99 459 -99 658 1 l67 33 511 -511 c281 -281 515 -524 521 -539 53 -143 -75 -285 -221 -247 -39 10 -85 53 -424 391 -209 208 -385 379 -390 379 -13 0 -225 -212 -225 -225 0 -5 171 -181 379 -390 339 -340 381 -385 391 -424 21 -80 -10 -159 -79 -202 -49 -31 -114 -38 -168 -19 -15 6 -200 183 -410 393 l-383 382 -117 -118 -118 -117 382 -383 c210 -210 387 -395 393 -410 40 -109 -32 -235 -146 -253 -58 -9 -102 8 -176 68 -125 99 -232 134 -385 124 -70 -4 -93 -2 -93 7 0 29 -61 136 -106 186 -88 98 -232 171 -338 171 l-42 0 -11 63 c-27 157 -137 298 -293 373 -27 13 -68 27 -90 30 -23 4 -43 12 -45 18 -1 6 -8 49 -14 96 -43 331 -411 542 -707 406 l-53 -24 -69 73 c-371 390 -416 1007 -106 1442 251 351 675 533 1094 468z m-602 -2260 c49 -21 81 -52 103 -100 41 -89 19 -148 -99 -268 -100 -102 -142 -127 -209 -127 -136 0 -223 141 -164 263 28 58 197 223 242 236 50 14 85 13 127 -4z m460 -549 c31 -16 74 -61 91 -94 18 -33 15 -115 -4 -155 -26 -56 -204 -223 -251 -236 -54 -15 -83 -13 -129 8 -85 38 -126 123 -104 214 10 42 25 64 93 135 107 112 154 142 223 142 30 0 66 -6 81 -14z m520 -484 c63 -29 109 -121 96 -193 -10 -53 -36 -89 -137 -186 -106 -103 -152 -123 -230 -102 -89 23 -137 86 -137 179 0 68 18 100 109 193 129 133 194 157 299 109z m649 -378 c21 -17 46 -46 55 -65 20 -38 23 -113 8 -155 -16 -41 -189 -214 -235 -235 -94 -44 -201 -2 -246 96 -40 87 -20 144 94 262 108 112 150 136 229 130 46 -2 66 -10 95 -33z" />
+                        </g>
+                    </svg>
+                </button>
+            </footer>
+        </article>
+
+        <!-- Volgende kaart -->
+        <article id="next-card" class="note-card" aria-hidden="true">
+            <div class="note-tape"><span class="tape-brand"><span class="brand-accent">ff</span>kwijt</span></div>
+            <p id="next-text" class="note-content"></p>
+            <footer class="note-footer">
+                <button class="hold-trigger" aria-label="Draag deze gedachte mee">
+                    <svg viewBox="0 0 512 512" preserveAspectRatio="xMidYMid meet">
+                        <g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)" stroke="none">
+                            <path
+                                d="M1313 4959 c-355 -40 -657 -189 -905 -447 -197 -206 -317 -435 -380 -726 -31 -146 -31 -427 0 -572 59 -274 172 -497 356 -707 l78 -87 -37 -42 c-145 -170 -150 -437 -11 -632 73 -102 180 -170 316 -200 22 -5 25 -11 27 -58 11 -254 202 -457 464 -492 l46 -7 11 -62 c33 -174 176 -333 351 -388 60 -19 168 -26 259 -16 19 2 26 -7 46 -55 90 -221 340 -353 573 -305 130 28 174 56 329 211 159 159 196 218 218 347 l12 74 58 7 c87 11 195 68 271 142 75 74 130 178 148 279 l10 64 69 11 c129 22 256 105 332 215 45 65 86 173 86 226 0 42 11 51 59 51 36 0 133 34 185 64 63 37 130 100 170 160 44 66 86 189 86 252 0 47 0 47 133 183 237 243 361 473 423 786 25 125 25 405 0 530 -61 309 -189 550 -410 771 -180 179 -347 283 -579 359 -299 97 -638 93 -938 -11 -198 -69 -378 -177 -524 -316 l-85 -80 -83 79 c-257 243 -593 382 -957 397 -69 2 -162 0 -207 -5z m2542 -335 c418 -80 779 -412 900 -829 70 -244 49 -517 -61 -753 -46 -100 -147 -251 -222 -332 l-61 -65 -613 612 -613 612 -85 -81 c-165 -158 -328 -194 -507 -113 -31 14 -83 54 -130 99 l-78 75 210 211 c305 306 409 391 589 476 217 102 439 132 671 88z m-2225 1 c166 -25 294 -70 430 -151 79 -47 233 -172 254 -206 9 -15 -19 -48 -192 -221 l-203 -203 173 -170 c198 -195 254 -242 351 -291 198 -99 459 -99 658 1 l67 33 511 -511 c281 -281 515 -524 521 -539 53 -143 -75 -285 -221 -247 -39 10 -85 53 -424 391 -209 208 -385 379 -390 379 -13 0 -225 -212 -225 -225 0 -5 171 -181 379 -390 339 -340 381 -385 391 -424 21 -80 -10 -159 -79 -202 -49 -31 -114 -38 -168 -19 -15 6 -200 183 -410 393 l-383 382 -117 -118 -118 -117 382 -383 c210 -210 387 -395 393 -410 40 -109 -32 -235 -146 -253 -58 -9 -102 8 -176 68 -125 99 -232 134 -385 124 -70 -4 -93 -2 -93 7 0 29 -61 136 -106 186 -88 98 -232 171 -338 171 l-42 0 -11 63 c-27 157 -137 298 -293 373 -27 13 -68 27 -90 30 -23 4 -43 12 -45 18 -1 6 -8 49 -14 96 -43 331 -411 542 -707 406 l-53 -24 -69 73 c-371 390 -416 1007 -106 1442 251 351 675 533 1094 468z m-602 -2260 c49 -21 81 -52 103 -100 41 -89 19 -148 -99 -268 -100 -102 -142 -127 -209 -127 -136 0 -223 141 -164 263 28 58 197 223 242 236 50 14 85 13 127 -4z m460 -549 c31 -16 74 -61 91 -94 18 -33 15 -115 -4 -155 -26 -56 -204 -223 -251 -236 -54 -15 -83 -13 -129 8 -85 38 -126 123 -104 214 10 42 25 64 93 135 107 112 154 142 223 142 30 0 66 -6 81 -14z m520 -484 c63 -29 109 -121 96 -193 -10 -53 -36 -89 -137 -186 -106 -103 -152 -123 -230 -102 -89 23 -137 86 -137 179 0 68 18 100 109 193 129 133 194 157 299 109z m649 -378 c21 -17 46 -46 55 -65 20 -38 23 -113 8 -155 -16 -41 -189 -214 -235 -235 -94 -44 -201 -2 -246 96 -40 87 -20 144 94 262 108 112 150 136 229 130 46 -2 66 -10 95 -33z" />
+                        </g>
+                    </svg>
+                </button>
+            </footer>
+        </article>
+
+        <!-- Zelfstandig schrijfvenster -->
+        <div id="compose-modal" class="compose-modal" role="dialog" aria-modal="true"
+            aria-label="Laat een gedachte achter">
+            <div class="note-tape"><span class="tape-brand"><span class="brand-accent">ff</span>kwijt</span></div>
+
+            <!-- Honeypot: onzichtbaar voor mensen, valstrik voor bots -->
+            <div class="ohnohoney" aria-hidden="true" style="opacity: 0; position: absolute; top: 0; left: 0; height: 0; width: 0; z-index: -1; pointer-events: none;">
+                <label for="compose-website">Website</label>
+                <input type="text" id="compose-website" name="website" tabindex="-1" autocomplete="off">
+            </div>
+
+            <textarea id="compose-input" class="compose-textarea"
+                placeholder="Iets wat je bezighoudt, waar je opgelucht over bent of wat je dwarszit (anoniem)..."
+                maxlength="280"></textarea>
+            <footer class="compose-footer">
+                <span class="privacy-hint">Deel geen namen, plekken of herkenbare details</span>
+                <div class="actions-row">
+                    <span id="compose-count" class="char-count">0 / 280</span>
+                    <div class="actions-buttons">
+                        <button id="compose-cancel" class="btn-text" type="button">Annuleren</button>
+                        <button id="compose-submit" class="btn-submit" type="button">Laat achter</button>
+                    </div>
+                </div>
+            </footer>
+        </div>
+
+    </main>
+
+    <!-- Crisis vangrail modal (113 Zelfmoordpreventie) -->
+    <div id="crisis-modal" class="crisis-overlay" role="dialog" aria-modal="true">
+        <div class="crisis-card">
+            <div class="note-tape"><span class="tape-brand"><span class="brand-accent">ff</span>kwijt</span></div>
+            <h2>Hulp is dichtbij</h2>
+            <p>
+                Het klinkt alsof je momenteel door een hele zware of donkere periode gaat. 
+                Dit platform is anoniem en stil, maar je hoeft dit niet alleen te dragen.
+            </p>
+            <p>
+                Wil je anoniem praten of chatten met iemand die luistert?
+            </p>
+            <div class="crisis-actions">
+                <a href="https://www.113.nl" target="_blank" rel="noopener noreferrer" class="crisis-btn-primary">
+                    Ga naar 113 Zelfmoordpreventie (of bel 0800-0113)
+                </a>
+                <button id="crisis-close" class="crisis-btn-close" type="button">Ik begrijp het, sluit dit venster</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="reconnect-modal" class="reconnect-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="reconnect-title">
+        <div class="reconnect-card">
+            <svg class="reconnect-icon lucide lucide-file" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+                <path d="M14 2v6h6" />
+            </svg>
+            <h2 id="reconnect-title">Deze pagina is niet bereikbaar</h2>
+            <p>We zijn de verbinding <span class="brand-accent">ff</span> kwijt!</p>
+            <p class="reconnect-error-code">HTTP ERROR 500</p>
+            <footer class="reconnect-actions">
+                <button id="leave-btn" class="btn-text" type="button">Weggaan</button>
+                <button id="reconnect-btn" class="btn-submit" type="button">Opnieuw verbinden</button>
+            </footer>
+        </div>
+    </div>
+
+    <div id="feed-loader" class="feed-loader" role="status" aria-label="Feed vernieuwen" hidden>
+        <span class="feed-spinner" aria-hidden="true"></span>
+    </div>
+
+    <span class="nav-hint" id="nav-hint">veeg of scroll omhoog / omlaag</span>
+
+    <script src="/app.js" defer></script>
+</body>
+
+</html>
