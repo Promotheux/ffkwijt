@@ -2,6 +2,8 @@ use crate::models::{Note, NoteCategory, PublicNoteDto};
 use chrono::Timelike;
 use chrono_tz::Europe::Amsterdam;
 
+pub const FEED_BROADCAST_CAPACITY: usize = 64;
+
 pub fn interleave_feed(pool: &[Note]) -> Vec<PublicNoteDto> {
     let hour = chrono::Utc::now().with_timezone(&Amsterdam).hour();
     let is_night = hour >= 23 || hour < 6;

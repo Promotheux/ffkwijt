@@ -2,7 +2,7 @@ use crate::models::NoteCategory;
 use ort::session::{builder::GraphOptimizationLevel, Session};
 use ort::value::Value;
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tokenizers::Tokenizer;
 
 pub struct ModerationEvaluation {
@@ -11,9 +11,10 @@ pub struct ModerationEvaluation {
     pub safety: String,
 }
 
+#[derive(Clone)]
 pub struct Moderator {
-    tokenizer: Tokenizer,
-    session: Mutex<Session>,
+    tokenizer: Arc<Tokenizer>,
+    session: Arc<Mutex<Session>>,
 }
 
 impl Moderator {
@@ -23,18 +24,30 @@ impl Moderator {
         let tokenizer = Tokenizer::from_file(dir.join("tokenizer.json"))
             .map_err(|e| format!("Kon tokenizer.json niet laden: {e}"))?;
 
+        // Intra-threads expliciet op 1 instellen om thread-contention/oversubscription
+        // in een multithreaded webserver met tokio blocking threads te voorkomen.
         let session = Session::builder()?
             .with_optimization_level(GraphOptimizationLevel::Level3)?
-            .with_intra_threads(2)?
+            .with_intra_threads(1)?
             .commit_from_file(dir.join("model.onnx"))?;
 
         Ok(Self {
-            tokenizer,
-            session: Mutex::new(session),
+            tokenizer: Arc::new(tokenizer),
+            session: Arc::new(Mutex::new(session)),
         })
     }
 
-    pub fn evaluate(&self, text: &str) -> Result<ModerationEvaluation, Box<dyn std::error::Error>> {
+    /// Asynchrone evaluatie die tokenization en inferentie offload naar Tokio's blocking threadpool.
+    pub async fn evaluate(&self, text: &str) -> Result<ModerationEvaluation, Box<dyn std::error::Error + Send + Sync>> {
+        let moderator = self.clone();
+        let text = text.to_string();
+
+        tokio::task::spawn_blocking(move || moderator.evaluate_sync(&text))
+            .await
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?
+    }
+
+    fn evaluate_sync(&self, text: &str) -> Result<ModerationEvaluation, Box<dyn std::error::Error + Send + Sync>> {
         // 1. Tokenize (max 128 tokens)
         let encoding = self
             .tokenizer

@@ -1,11 +1,16 @@
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{Pool, Postgres};
+use std::time::Duration;
 
 pub type DbPool = Pool<Postgres>;
 
 pub async fn init_db(database_url: &str) -> Result<DbPool, sqlx::Error> {
     let pool = PgPoolOptions::new()
-        .max_connections(5)
+        .max_connections(10)
+        .min_connections(2)
+        .acquire_timeout(Duration::from_secs(3))
+        .idle_timeout(Duration::from_secs(600))
+        .max_lifetime(Duration::from_secs(1800))
         .connect(database_url)
         .await?;
 
@@ -50,6 +55,9 @@ pub async fn init_db(database_url: &str) -> Result<DbPool, sqlx::Error> {
             created_at TIMESTAMPTZ DEFAULT NOW(),
             reviewed_at TIMESTAMPTZ
         );
+
+        CREATE INDEX IF NOT EXISTS idx_notes_moderation_created_at
+        ON notes (moderation_status, created_at DESC);
         "#,
     )
     .execute(&pool)

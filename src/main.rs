@@ -43,8 +43,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let moderator = Arc::new(Moderator::new_embedded("models")?);
 
-    // Channel buffer voor live feed updates naar de browsers
-    let (feed_tx, _feed_rx) = broadcast::channel::<PublicNoteDto>(100);
+    // Channel buffer voor live feed updates naar de browsers (beperkt tot 64 slots)
+    let (feed_tx, _feed_rx) = broadcast::channel::<PublicNoteDto>(feed::FEED_BROADCAST_CAPACITY);
 
     // Luisteraar voor berichten die later goedgekeurd zijn via ffkwijt-admin
     let approved_pool = pool.clone();
@@ -71,7 +71,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             if let Ok(id) = Uuid::parse_str(notification.payload()) {
                 let note_res = sqlx::query_as::<_, Note>(
                     r#"
-                    SELECT id, text, category, valence, resonances, moderation_status AS status, created_at
+                    SELECT id, text, category, valence, resonances, created_at
                     FROM notes
                     WHERE id = $1 AND moderation_status = 'approved'
                     "#,
@@ -128,7 +128,7 @@ async fn get_feed(
 
     let notes = sqlx::query_as::<_, Note>(
         r#"
-        SELECT id, text, category, valence, resonances, moderation_status AS status, created_at 
+        SELECT id, text, category, valence, resonances, created_at 
         FROM notes 
         WHERE moderation_status = 'approved'
         AND (
@@ -167,7 +167,11 @@ async fn stream_feed(
         Err(_) => None,
     });
 
-    Sse::new(stream).keep_alive(KeepAlive::new().interval(Duration::from_secs(15)))
+    Sse::new(stream).keep_alive(
+        KeepAlive::new()
+            .interval(Duration::from_secs(15))
+            .text("keep-alive"),
+    )
 }
 
 async fn post_vent(
@@ -205,7 +209,7 @@ async fn post_vent(
             .into_response();
     }
 
-    let (category, valence, safety) = match state.moderator.evaluate(text) {
+    let (category, valence, safety) = match state.moderator.evaluate(text).await {
         Ok(eval) => {
             eprintln!(
                 "--> AI Resultaat: category={:?}, valence={}, safety=\"{}\"",
