@@ -664,7 +664,11 @@ if (!isHistoryReturn) sessionStorage.removeItem('ffkwijt_left');
 if (!isHistoryReturn || !handleHistoryReturn()) {
     if (outOfFocusEnabled && document.hidden) triggerDisconnectState();
     fetchFeed().then(() => {
-        setupSSE();
+        if ('requestIdleCallback' in window) {
+            requestIdleCallback(() => setupSSE(), { timeout: 2000 });
+        } else {
+            setTimeout(setupSSE, 1000);
+        }
     });
 }
 
