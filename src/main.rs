@@ -20,7 +20,7 @@ use moderator::Moderator;
 use sqlx::postgres::PgListener;
 use std::{convert::Infallible, sync::Arc, time::Duration};
 use tokio::sync::broadcast;
-use tokio_stream::wrappers::BroadcastStream;
+use tokio_stream::wrappers::{errors::BroadcastStreamRecvError, BroadcastStream};
 use tokio_stream::StreamExt;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::{ServeDir, ServeFile};
@@ -164,7 +164,10 @@ async fn stream_feed(
             let json = serde_json::to_string(&note).unwrap_or_default();
             Some(Ok(Event::default().event("new_note").data(json)))
         }
-        Err(_) => None,
+        Err(BroadcastStreamRecvError::Lagged(skipped)) => {
+            tracing::warn!(skipped, "SSE-client loopt achter; stream blijft verbonden");
+            None
+        }
     });
 
     Sse::new(stream).keep_alive(
