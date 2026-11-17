@@ -93,11 +93,9 @@ function configureCard(cardEl, textEl, item, paletteIdx) {
 
     const holdBtn = cardEl.querySelector('.hold-trigger');
     if (holdBtn) {
-        if (localResonated.has(item.id)) {
-            holdBtn.classList.add('is-held');
-        } else {
-            holdBtn.classList.remove('is-held');
-        }
+        const held = localResonated.has(item.id);
+        holdBtn.classList.toggle('is-held', held);
+        holdBtn.setAttribute('aria-pressed', String(held));
 
         holdBtn.onclick = async (e) => {
             e.stopPropagation();
@@ -106,6 +104,7 @@ function configureCard(cardEl, textEl, item, paletteIdx) {
             localResonated.add(item.id);
             localStorage.setItem('ffkwijt_resonated', JSON.stringify(Array.from(localResonated)));
             holdBtn.classList.add('is-held');
+            holdBtn.setAttribute('aria-pressed', 'true');
 
             try {
                 await fetch(`/api/resonate/${encodeURIComponent(item.id)}`, {
