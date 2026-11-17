@@ -908,6 +908,11 @@ body.info-page {
     border-bottom: 1px solid rgba(60, 50, 40, 0.14);
 }
 
+/* De footer heeft zijn eigen lijn; zo staan er geen twee lijnen met een gat ertussen */
+.info-main section:last-of-type {
+    border-bottom: none;
+}
+
 .info-main h2 {
     font-size: 1.5rem;
     margin-bottom: 16px;
@@ -987,7 +992,7 @@ body.info-page {
 }
 
 .info-footer {
-    margin-top: 3rem;
+    margin-top: 1rem;
     padding-top: 1.5rem;
     padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 32px);
     border-top: 1px solid rgba(60, 50, 40, 0.14);
