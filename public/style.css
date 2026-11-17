@@ -567,6 +567,36 @@ body {
     height: 15px;
 }
 
+/* Desktop: kaart groeit mee met het scherm (±460 px op 1280, ±600 px op 2k) */
+@media (min-width: 900px) and (min-height: 640px) {
+    .viewport {
+        max-width: clamp(500px, 34vw, 640px);
+        max-height: clamp(720px, 80vh, 960px);
+    }
+
+    .note-card {
+        min-height: clamp(400px, 46vh, 560px);
+        max-height: clamp(470px, 70vh, 760px);
+        padding: 56px 44px 22px 44px;
+    }
+
+    .note-content {
+        font-size: clamp(1.65rem, 1.1rem + 0.6vw, 2.1rem);
+    }
+
+    .compose-modal {
+        max-width: clamp(456px, calc(34vw - 44px), 596px);
+        min-height: clamp(400px, 46vh, 560px);
+        max-height: clamp(470px, 74vh, 760px);
+        padding: 56px 40px 24px 40px;
+    }
+
+    .compose-textarea {
+        height: clamp(160px, 22vh, 260px);
+        font-size: clamp(1.4rem, 1rem + 0.45vw, 1.8rem);
+    }
+}
+
 /* 113 Crisis Modal */
 .crisis-overlay {
     position: fixed;
