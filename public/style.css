@@ -948,6 +948,10 @@ body.info-page {
     padding-top: 24px;
 }
 
+.info-dialog .info-footer {
+    width: 100%;
+}
+
 .info-close {
     position: sticky;
     top: 12px;

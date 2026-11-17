@@ -645,8 +645,20 @@ const infoLink = document.querySelector('.info-link');
 async function openInfo() {
     if (!infoBody.hasChildNodes()) {
         const html = await (await fetch('/info.html')).text();
-        const main = new DOMParser().parseFromString(html, 'text/html').querySelector('.info-main');
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const main = doc.querySelector('.info-main');
         if (!main) throw new Error('info-main ontbreekt');
+        // Footer (contact, open source) ook tonen; 'Terug naar het prikbord'
+        // weglaten, want dat herlaadt de pagina. Sluiten doe je met de knop.
+        const footer = doc.querySelector('.info-footer');
+        if (footer) {
+            const back = footer.querySelector('a[href="/"]');
+            if (back) {
+                back.nextElementSibling?.classList.contains('info-footer-divider') && back.nextElementSibling.remove();
+                back.remove();
+            }
+            infoDialog.append(footer);
+        }
         // id's prefixen: report-title bestaat ook in de meldmodal
         main.querySelectorAll('[id]').forEach(el => { el.id = `info-${el.id}`; });
         main.querySelectorAll('[aria-labelledby]').forEach(el => {
