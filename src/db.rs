@@ -70,6 +70,31 @@ pub async fn init_db(database_url: &str) -> Result<DbPool, sqlx::Error> {
     .execute(&pool)
     .await?;
 
+    // 5. meldingen (geen IP, geen browserkenmerken; tijd afgerond op kwartier)
+    sqlx::query(
+        r#"
+        CREATE TABLE IF NOT EXISTS reports (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            note_id UUID NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+            reason VARCHAR(32) NOT NULL,
+            details TEXT,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            handled_at TIMESTAMPTZ
+        );
+        "#,
+    )
+    .execute(&pool)
+    .await?;
+
+    sqlx::query(
+        r#"
+        CREATE INDEX IF NOT EXISTS idx_reports_open
+        ON reports (note_id) WHERE handled_at IS NULL;
+        "#,
+    )
+    .execute(&pool)
+    .await?;
+
     seed_if_empty(&pool).await?;
 
     Ok(pool)

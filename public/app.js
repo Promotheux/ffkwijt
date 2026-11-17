@@ -43,6 +43,7 @@ let isAnimating = false;
 let isWriting = false;
 let isDisconnected = false;
 let isRefreshing = false;
+let isReporting = false;
 
 const viewport = document.getElementById('viewport');
 const prevCard = document.getElementById('prev-card');
@@ -81,6 +82,14 @@ function configureCard(cardEl, textEl, item, paletteIdx) {
 
     const tape = cardEl.querySelector('.note-tape');
     if (tape) tape.style.transform = styleMeta.tapeTransform;
+
+    const reportBtn = cardEl.querySelector('.report-trigger');
+    if (reportBtn) {
+        reportBtn.onclick = (e) => {
+            e.stopPropagation();
+            openReport(item.id);
+        };
+    }
 
     const holdBtn = cardEl.querySelector('.hold-trigger');
     if (holdBtn) {
@@ -276,7 +285,7 @@ function cancelTransition() {
 }
 
 function openCompose() {
-    if (isDisconnected || isRefreshing || isAnimating) return;
+    if (isDisconnected || isRefreshing || isAnimating || isReporting) return;
     isWriting = true;
     dragY = 0;
 
@@ -508,6 +517,85 @@ crisisCloseBtn.addEventListener('click', () => {
     crisisModal.style.display = 'none';
 });
 
+// 4. Melden
+const reportModal = document.getElementById('report-modal');
+const reportForm = document.getElementById('report-form');
+const reportDetails = document.getElementById('report-details');
+const reportWebsite = document.getElementById('report-website'); // Honeypot
+const reportStatus = document.getElementById('report-status');
+const reportSubmit = document.getElementById('report-submit');
+const reportCancel = document.getElementById('report-cancel');
+let reportNoteId = null;
+let reportCloseTimer = null;
+
+function openReport(noteId) {
+    if (isDisconnected || isWriting || isAnimating || isRefreshing) return;
+    clearTimeout(reportCloseTimer);
+    isReporting = true;
+    reportNoteId = noteId;
+    reportForm.reset();
+    reportStatus.textContent = '';
+    reportSubmit.disabled = false;
+    reportModal.style.display = 'flex';
+    setTimeout(() => reportForm.querySelector('input[name="reason"]')?.focus(), 50);
+}
+
+function closeReport() {
+    clearTimeout(reportCloseTimer);
+    reportModal.style.display = 'none';
+    reportForm.reset();
+    reportNoteId = null;
+    isReporting = false;
+}
+
+reportCancel.addEventListener('click', closeReport);
+reportModal.addEventListener('click', (e) => {
+    if (e.target === reportModal) closeReport();
+});
+
+reportForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!reportNoteId) return;
+
+    const reason = reportForm.querySelector('input[name="reason"]:checked')?.value;
+    if (!reason) {
+        reportStatus.textContent = 'Kies een reden.';
+        return;
+    }
+
+    reportSubmit.disabled = true;
+    reportStatus.textContent = '';
+
+    try {
+        const res = await fetch(`/api/report/${encodeURIComponent(reportNoteId)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                reason,
+                details: reportDetails.value,
+                website: reportWebsite ? reportWebsite.value : ''
+            })
+        });
+
+        if (res.ok) {
+            reportStatus.textContent = 'Bedankt. We kijken ernaar.';
+            reportCloseTimer = setTimeout(closeReport, 1600);
+            return;
+        }
+
+        if (res.status === 429) {
+            reportStatus.textContent = await res.text();
+        } else if (res.status === 404) {
+            reportStatus.textContent = 'Deze gedachte is al weg of wordt al bekeken.';
+        } else {
+            reportStatus.textContent = 'Melden lukte niet. Probeer het later opnieuw of mail contact@ffkwijt.nl.';
+        }
+    } catch (err) {
+        reportStatus.textContent = 'Er kon geen verbinding worden gemaakt met de server.';
+    }
+    reportSubmit.disabled = false;
+});
+
 writeToggleBtn.addEventListener('click', openCompose);
 composeCancel.addEventListener('click', closeCompose);
 composeSubmit.addEventListener('click', handlePublish);
@@ -552,7 +640,7 @@ viewport.addEventListener('touchcancel', () => {
 // Trackpad & Scrollwiel
 let wheelTimeout;
 window.addEventListener('wheel', (e) => {
-    if (isDisconnected || isRefreshing || isAnimating || isWriting) return;
+    if (isDisconnected || isRefreshing || isAnimating || isWriting || isReporting) return;
 
     const dampedDelta = Math.max(Math.min(e.deltaY * 0.7, 35), -35);
     dragY -= dampedDelta;
@@ -567,6 +655,10 @@ window.addEventListener('wheel', (e) => {
 // Toetsenbordnavigatie
 window.addEventListener('keydown', (e) => {
     if (isDisconnected || isRefreshing) return;
+    if (isReporting) {
+        if (e.key === 'Escape') closeReport();
+        return;
+    }
     if (isWriting) {
         if (e.key === 'Escape') closeCompose();
         return;
@@ -615,6 +707,8 @@ function triggerDisconnectState() {
         composeInput.value = '';
         closeCompose();
     }
+
+    if (isReporting) closeReport();
 
     reconnectModal.style.display = 'flex';
 }

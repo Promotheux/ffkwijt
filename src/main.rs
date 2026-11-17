@@ -2,11 +2,12 @@ mod db;
 mod feed;
 mod models;
 mod moderator;
+mod ratelimit;
 mod sanitizer;
 
 use axum::{
-    extract::{Path, Query, State},
-    http::StatusCode,
+    extract::{ConnectInfo, Path, Query, State},
+    http::{HeaderMap, StatusCode},
     response::{
         sse::{Event, KeepAlive, Sse},
         IntoResponse,
@@ -15,10 +16,14 @@ use axum::{
     Json, Router,
 };
 use futures_util::stream::Stream;
-use models::{CreateVentRequest, FeedQuery, Note, NoteCategory, PublicNoteDto};
+use models::{
+    CreateReportRequest, CreateVentRequest, FeedQuery, Note, NoteCategory, PublicNoteDto,
+    REPORT_REASONS,
+};
 use moderator::Moderator;
 use sqlx::postgres::PgListener;
-use std::{convert::Infallible, sync::Arc, time::Duration};
+use ratelimit::RateLimiter;
+use std::{convert::Infallible, net::SocketAddr, sync::Arc, time::Duration};
 use tokio::sync::broadcast;
 use tokio_stream::wrappers::{errors::BroadcastStreamRecvError, BroadcastStream};
 use tokio_stream::StreamExt;
@@ -31,7 +36,16 @@ struct AppState {
     db: db::DbPool,
     moderator: Arc<Moderator>,
     feed_tx: broadcast::Sender<PublicNoteDto>,
+    report_limiter: Arc<RateLimiter>,
+    report_hide_threshold: i64,
 }
+
+/// Maximaal aantal meldingen per IP-adres per uur (alleen in geheugen bijgehouden).
+const REPORTS_PER_HOUR: usize = 5;
+/// Maximale lengte van de optionele toelichting bij een melding.
+const REPORT_DETAILS_MAX: usize = 500;
+/// Hoe lang meldingen bewaard blijven.
+const REPORT_RETENTION_DAYS: i32 = 180;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -87,10 +101,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    let report_limiter = Arc::new(RateLimiter::new(
+        REPORTS_PER_HOUR,
+        Duration::from_secs(60 * 60),
+    ));
+
+    // Optioneel: verberg een bericht automatisch (terug naar 'pending') zodra het
+    // zoveel open meldingen heeft. 0 = uit; dan beslist het beheer altijd zelf.
+    let report_hide_threshold: i64 = std::env::var("REPORT_HIDE_THRESHOLD")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(0);
+
+    // Periodiek opruimen: oude meldingen en verlopen rate-limit sleutels
+    let cleanup_pool = pool.clone();
+    let cleanup_limiter = report_limiter.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(60 * 60));
+        loop {
+            interval.tick().await;
+            cleanup_limiter.prune();
+            if let Err(e) = sqlx::query(
+                "DELETE FROM reports WHERE created_at < NOW() - make_interval(days => $1)",
+            )
+            .bind(REPORT_RETENTION_DAYS)
+            .execute(&cleanup_pool)
+            .await
+            {
+                eprintln!("Fout bij opruimen oude meldingen: {:?}", e);
+            }
+        }
+    });
+
     let state = AppState {
         db: pool,
         moderator,
         feed_tx,
+        report_limiter,
+        report_hide_threshold,
     };
 
     let cors = CorsLayer::new()
@@ -105,6 +153,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/feed/stream", get(stream_feed))
         .route("/api/vent", post(post_vent))
         .route("/api/resonate/:id", post(post_resonate))
+        .route("/api/report/:id", post(post_report))
         .route_service("/", ServeFile::new("public/index.html"))
         .fallback_service(serve_dir)
         .layer(cors)
@@ -112,7 +161,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await?;
     println!("ffkwijt backend met PostgreSQL luistert op http://127.0.0.1:3000");
-    axum::serve(listener, app).await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
 
     Ok(())
 }
@@ -313,4 +366,110 @@ async fn post_resonate(
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
+}
+
+/// Bepaalt een sleutel voor de rate limiter. Achter Caddy komt het echte adres uit
+/// X-Forwarded-For; zonder proxy valt het terug op het socketadres.
+/// Deze waarde wordt nergens opgeslagen.
+fn client_key(headers: &HeaderMap, addr: SocketAddr) -> String {
+    headers
+        .get("x-forwarded-for")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.split(',').next())
+        .map(|v| v.trim().to_string())
+        .filter(|v| !v.is_empty())
+        .unwrap_or_else(|| addr.ip().to_string())
+}
+
+async fn post_report(
+    State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
+    Path(id): Path<Uuid>,
+    Json(payload): Json<CreateReportRequest>,
+) -> impl IntoResponse {
+    // Honeypot: doe alsof het gelukt is
+    if payload.website.as_deref().is_some_and(|w| !w.trim().is_empty()) {
+        return (StatusCode::ACCEPTED, "Ontvangen").into_response();
+    }
+
+    if !REPORT_REASONS.contains(&payload.reason.as_str()) {
+        return (StatusCode::BAD_REQUEST, "Ongeldige reden").into_response();
+    }
+
+    let details = payload
+        .details
+        .as_deref()
+        .map(str::trim)
+        .filter(|d| !d.is_empty())
+        .map(|d| d.chars().take(REPORT_DETAILS_MAX).collect::<String>());
+
+    if !state.report_limiter.check(&client_key(&headers, addr)) {
+        return (
+            StatusCode::TOO_MANY_REQUESTS,
+            "Je hebt het afgelopen uur al veel gemeld. Probeer het later opnieuw.",
+        )
+            .into_response();
+    }
+
+    let now = chrono::Utc::now();
+    let truncated_time =
+        chrono::DateTime::from_timestamp((now.timestamp() / 900) * 900, 0).unwrap_or(now);
+
+    // Alleen goedgekeurde, zichtbare berichten kunnen gemeld worden
+    let insert = sqlx::query(
+        r#"
+        INSERT INTO reports (note_id, reason, details, created_at)
+        SELECT id, $2, $3, $4 FROM notes
+        WHERE id = $1 AND moderation_status = 'approved'
+        "#,
+    )
+    .bind(id)
+    .bind(&payload.reason)
+    .bind(details)
+    .bind(truncated_time)
+    .execute(&state.db)
+    .await;
+
+    match insert {
+        Ok(r) if r.rows_affected() == 0 => {
+            return StatusCode::NOT_FOUND.into_response();
+        }
+        Ok(_) => {}
+        Err(err) => {
+            eprintln!("Fout bij opslaan melding: {:?}", err);
+            return (StatusCode::INTERNAL_SERVER_ERROR, "Fout bij opslaan").into_response();
+        }
+    }
+
+    // Seintje voor ffkwijt-admin
+    let _ = sqlx::query("SELECT pg_notify('new_report', $1)")
+        .bind(id.to_string())
+        .execute(&state.db)
+        .await;
+
+    if state.report_hide_threshold > 0 {
+        let hidden = sqlx::query(
+            r#"
+            UPDATE notes SET moderation_status = 'pending'
+            WHERE id = $1 AND moderation_status = 'approved'
+            AND (SELECT COUNT(*) FROM reports WHERE note_id = $1 AND handled_at IS NULL) >= $2
+            "#,
+        )
+        .bind(id)
+        .bind(state.report_hide_threshold)
+        .execute(&state.db)
+        .await;
+
+        if let Ok(r) = hidden {
+            if r.rows_affected() > 0 {
+                let _ = sqlx::query("SELECT pg_notify('new_pending_vent', $1)")
+                    .bind(id.to_string())
+                    .execute(&state.db)
+                    .await;
+            }
+        }
+    }
+
+    (StatusCode::ACCEPTED, "Ontvangen").into_response()
 }
