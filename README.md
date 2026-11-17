@@ -42,6 +42,7 @@ High-performance, async backend service voor het **ffkwijt** platform. Gebouwd m
 │   ├── feed.rs         # SSE broadcasting & feed streaming endpoints
 │   ├── models.rs       # Serde structs, request/response DTO's
 │   ├── moderator.rs    # In-memory ONNX tokenizer en inferentie logica
+│   ├── ratelimit.rs    # In-memory rate limiter (meldingen)
 │   └── sanitizer.rs    # Input sanitization en HTML escaping
 ├── models/             # Tokenizer config & ONNX model artefacten (*.onnx genegeerd in git)
 ├── train.py            # Local fine-tuning & ONNX export pipeline
@@ -56,3 +57,13 @@ High-performance, async backend service voor het **ffkwijt** platform. Gebouwd m
 ### Vereisten
 - **Rust:** `1.80+` (stable)
 - **PostgreSQL:** `15+
+---
+
+## Melden
+
+`POST /api/report/:id` met `{ "reason": "personal" | "threat" | "hate" | "spam" | "other", "details"?: string }`.
+
+- Meldingen komen in de tabel `reports` (geen IP, tijd afgerond op een kwartier) en sturen `pg_notify('new_report', <note_id>)` voor ffkwijt-admin.
+- Max. 5 meldingen per IP per uur; de IP-teller staat alleen in het geheugen.
+- Meldingen ouder dan 180 dagen worden elk uur opgeruimd.
+- `REPORT_HIDE_THRESHOLD` (optioneel, standaard `0` = uit): bij zoveel open meldingen gaat een bericht terug naar `pending`.

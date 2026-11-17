@@ -55,6 +55,18 @@ pub struct FeedQuery {
 }
 
 #[derive(serde::Deserialize)]
+pub struct CreateReportRequest {
+    pub reason: String,
+    #[serde(default)]
+    pub details: Option<String>,
+    #[serde(default)]
+    pub website: Option<String>,
+}
+
+/// Toegestane meldredenen. Alles daarbuiten wordt geweigerd.
+pub const REPORT_REASONS: &[&str] = &["personal", "threat", "hate", "spam", "other"];
+
+#[derive(serde::Deserialize)]
 pub struct CreateVentRequest {
     pub text: String,
     #[serde(default)]

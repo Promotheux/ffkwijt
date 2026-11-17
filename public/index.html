@@ -23,14 +23,14 @@
     
     
     <!-- Preload core styles & script -->
-    <link rel="preload" href="/style.css?v=bc863cd" as="style">
-    <link rel="preload" href="/app.js?v=bc863cd" as="script">
+    <link rel="preload" href="/style.css?v=meld1" as="style">
+    <link rel="preload" href="/app.js?v=meld1" as="script">
 
     <!-- Stylesheet -->
-    <link rel="stylesheet" href="/style.css?v=bc863cd">
+    <link rel="stylesheet" href="/style.css?v=meld1">
     
     <!-- Scripts -->
-    <script src="/app.js?v=bc863cd" defer></script>
+    <script src="/app.js?v=meld1" defer></script>
 </head>
 
 <body>
@@ -68,6 +68,7 @@
             <div class="note-tape"><span class="tape-brand"><span class="brand-accent">ff</span>kwijt</span></div>
             <p id="prev-text" class="note-content"></p>
             <footer class="note-footer">
+                <button class="report-trigger" type="button" aria-label="Meld deze gedachte">melden</button>
                 <button class="hold-trigger" aria-label="Draag deze gedachte mee">
                     <svg viewBox="0 0 512 512" preserveAspectRatio="xMidYMid meet">
                         <g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)" stroke="none">
@@ -84,6 +85,7 @@
             <div class="note-tape"><span class="tape-brand"><span class="brand-accent">ff</span>kwijt</span></div>
             <p id="current-text" class="note-content"></p>
             <footer class="note-footer">
+                <button class="report-trigger" type="button" aria-label="Meld deze gedachte">melden</button>
                 <button class="hold-trigger" aria-label="Draag deze gedachte mee">
                     <svg viewBox="0 0 512 512" preserveAspectRatio="xMidYMid meet">
                         <g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)" stroke="none">
@@ -100,6 +102,7 @@
             <div class="note-tape"><span class="tape-brand"><span class="brand-accent">ff</span>kwijt</span></div>
             <p id="next-text" class="note-content"></p>
             <footer class="note-footer">
+                <button class="report-trigger" type="button" aria-label="Meld deze gedachte">melden</button>
                 <button class="hold-trigger" aria-label="Draag deze gedachte mee">
                     <svg viewBox="0 0 512 512" preserveAspectRatio="xMidYMid meet">
                         <g transform="translate(0.000000,512.000000) scale(0.100000,-0.100000)" stroke="none">
@@ -158,6 +161,41 @@
                 <button id="crisis-close" class="crisis-btn-close" type="button">Ik begrijp het, sluit dit venster</button>
             </div>
         </div>
+    </div>
+
+
+    <!-- Meldvenster -->
+    <div id="report-modal" class="crisis-overlay report-overlay" role="dialog" aria-modal="true" aria-labelledby="report-title" style="display: none;">
+        <form id="report-form" class="crisis-card report-card">
+            <div class="note-tape"><span class="tape-brand"><span class="brand-accent">ff</span>kwijt</span></div>
+            <h2 id="report-title">Gedachte melden</h2>
+            <p>Wat is er mis met deze gedachte? Een melding haalt niets automatisch weg; het beheer bekijkt het.</p>
+
+            <div class="ohnohoney" aria-hidden="true" style="opacity: 0; position: absolute; top: 0; left: 0; height: 0; width: 0; z-index: -1; pointer-events: none;">
+                <label for="report-website">Website</label>
+                <input type="text" id="report-website" name="website" tabindex="-1" autocomplete="off">
+            </div>
+
+            <fieldset class="report-reasons">
+                <legend class="visually-hidden">Reden</legend>
+                <label><input type="radio" name="reason" value="personal" required> Bevat namen of herkenbare gegevens</label>
+                <label><input type="radio" name="reason" value="threat"> Bedreiging of intimidatie</label>
+                <label><input type="radio" name="reason" value="hate"> Haatdragend of discriminerend</label>
+                <label><input type="radio" name="reason" value="spam"> Spam of reclame</label>
+                <label><input type="radio" name="reason" value="other"> Iets anders</label>
+            </fieldset>
+
+            <label class="report-details-label" for="report-details">Toelichting (optioneel)</label>
+            <textarea id="report-details" class="report-details" maxlength="500" rows="3"></textarea>
+
+            <p id="report-status" class="report-status" role="status" aria-live="polite"></p>
+
+            <footer class="report-actions">
+                <button id="report-cancel" class="btn-text" type="button">Annuleren</button>
+                <button id="report-submit" class="btn-submit" type="submit">Melden</button>
+            </footer>
+            <p class="report-contact">Liever mailen? <a href="mailto:contact@ffkwijt.nl">contact@ffkwijt.nl</a></p>
+        </form>
     </div>
 
     <div id="reconnect-modal" class="reconnect-overlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="reconnect-title">
