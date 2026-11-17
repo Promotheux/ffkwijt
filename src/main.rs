@@ -37,11 +37,15 @@ struct AppState {
     moderator: Arc<Moderator>,
     feed_tx: broadcast::Sender<PublicNoteDto>,
     report_limiter: Arc<RateLimiter>,
+    post_limiter: Arc<RateLimiter>,
     report_hide_threshold: i64,
 }
 
 /// Maximaal aantal meldingen per IP-adres per uur (alleen in geheugen bijgehouden).
 const REPORTS_PER_HOUR: usize = 5;
+/// Maximaal aantal plaatsingen per IP-adres per 10 minuten. Ruim genoeg voor een
+/// gedeeld campus-IP, maar stopt het volspammen van het prikbord.
+const POSTS_PER_10_MIN: usize = 5;
 /// Maximale lengte van de optionele toelichting bij een melding.
 const REPORT_DETAILS_MAX: usize = 500;
 /// Hoe lang meldingen bewaard blijven.
@@ -105,6 +109,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         REPORTS_PER_HOUR,
         Duration::from_secs(60 * 60),
     ));
+    let post_limiter = Arc::new(RateLimiter::new(
+        POSTS_PER_10_MIN,
+        Duration::from_secs(10 * 60),
+    ));
 
     // Optioneel: verberg een bericht automatisch (terug naar 'pending') zodra het
     // zoveel open meldingen heeft. 0 = uit; dan beslist het beheer altijd zelf.
@@ -116,11 +124,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Periodiek opruimen: oude meldingen en verlopen rate-limit sleutels
     let cleanup_pool = pool.clone();
     let cleanup_limiter = report_limiter.clone();
+    let cleanup_post_limiter = post_limiter.clone();
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(60 * 60));
         loop {
             interval.tick().await;
             cleanup_limiter.prune();
+            cleanup_post_limiter.prune();
             if let Err(e) = sqlx::query(
                 "DELETE FROM reports WHERE created_at < NOW() - make_interval(days => $1)",
             )
@@ -138,6 +148,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         moderator,
         feed_tx,
         report_limiter,
+        post_limiter,
         report_hide_threshold,
     };
 
@@ -232,6 +243,8 @@ async fn stream_feed(
 
 async fn post_vent(
     State(state): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    headers: HeaderMap,
     Json(payload): Json<CreateVentRequest>,
 ) -> impl IntoResponse {
     if let Some(ref trap) = payload.website {
@@ -246,6 +259,15 @@ async fn post_vent(
 
     if text.is_empty() || text.len() > 280 {
         return (StatusCode::BAD_REQUEST, "Ongeldige tekstlengte").into_response();
+    }
+
+    // Vóór de AI-check, zodat een flood ook geen rekenkracht kost
+    if !state.post_limiter.check(&client_key(&headers, addr)) {
+        return (
+            StatusCode::TOO_MANY_REQUESTS,
+            "Je hebt net al een paar gedachten geplaatst. Neem even rust en probeer het over een paar minuten opnieuw.",
+        )
+            .into_response();
     }
 
     if sanitizer::contains_obvious_pii(text) {

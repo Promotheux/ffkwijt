@@ -637,10 +637,45 @@ viewport.addEventListener('touchcancel', () => {
     cancelTransition();
 });
 
+// Info als overlay: het prikbord blijft staan, dus je houdt je plek.
+// /info.html blijft bestaan als losse pagina (zonder JS, zoekmachines).
+const infoDialog = document.getElementById('info-dialog');
+const infoBody = document.getElementById('info-dialog-body');
+const infoLink = document.querySelector('.info-link');
+
+async function openInfo() {
+    if (!infoBody.hasChildNodes()) {
+        const html = await (await fetch('/info.html')).text();
+        const main = new DOMParser().parseFromString(html, 'text/html').querySelector('.info-main');
+        if (!main) throw new Error('info-main ontbreekt');
+        // id's prefixen: report-title bestaat ook in de meldmodal
+        main.querySelectorAll('[id]').forEach(el => { el.id = `info-${el.id}`; });
+        main.querySelectorAll('[aria-labelledby]').forEach(el => {
+            el.setAttribute('aria-labelledby', `info-${el.getAttribute('aria-labelledby')}`);
+        });
+        infoBody.append(...main.childNodes);
+    }
+    infoDialog.showModal();
+    infoDialog.scrollTop = 0;
+    history.pushState({ info: true }, '', '#info');
+}
+
+infoLink.addEventListener('click', (e) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey) return; // nieuw tabblad mag gewoon
+    e.preventDefault();
+    openInfo().catch(() => { window.location.href = '/info.html'; });
+});
+document.getElementById('info-close').addEventListener('click', () => infoDialog.close());
+infoDialog.addEventListener('click', (e) => { if (e.target === infoDialog) infoDialog.close(); });
+// Sluiten via knop/Escape haalt ook de #info-stap uit de geschiedenis
+infoDialog.addEventListener('close', () => { if (history.state?.info) history.back(); });
+// Terugknop (mobiel) sluit de overlay in plaats van de site te verlaten
+window.addEventListener('popstate', () => { if (infoDialog.open) infoDialog.close(); });
+
 // Trackpad & Scrollwiel
 let wheelTimeout;
 window.addEventListener('wheel', (e) => {
-    if (isDisconnected || isRefreshing || isAnimating || isWriting || isReporting) return;
+    if (isDisconnected || isRefreshing || isAnimating || isWriting || isReporting || infoDialog.open) return;
 
     const dampedDelta = Math.max(Math.min(e.deltaY * 0.7, 35), -35);
     dragY -= dampedDelta;
@@ -654,7 +689,7 @@ window.addEventListener('wheel', (e) => {
 
 // Toetsenbordnavigatie
 window.addEventListener('keydown', (e) => {
-    if (isDisconnected || isRefreshing) return;
+    if (isDisconnected || isRefreshing || infoDialog.open) return;
     if (isReporting) {
         if (e.key === 'Escape') closeReport();
         return;
@@ -679,7 +714,7 @@ const reconnectModal = document.getElementById('reconnect-modal');
 const reconnectBtn = document.getElementById('reconnect-btn');
 const originalTitle = document.title;
 const outOfFocusEnabled = new URLSearchParams(window.location.search).get('of') !== 'disabled';
-const privacyContent = document.querySelectorAll('.top-bar, .ambient-board, #viewport, #crisis-modal, #nav-hint');
+const privacyContent = document.querySelectorAll('.top-bar, .ambient-board, #viewport, #crisis-modal, #nav-hint, #info-dialog');
 
 function escapeToGoogle() {
     if (typeof composeInput !== 'undefined' && composeInput) {
@@ -709,6 +744,7 @@ function triggerDisconnectState() {
     }
 
     if (isReporting) closeReport();
+    if (infoDialog.open) infoDialog.close();
 
     reconnectModal.style.display = 'flex';
 }

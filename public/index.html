@@ -23,14 +23,14 @@
     
     
     <!-- Preload core styles & script -->
-    <link rel="preload" href="/style.css?v=meld1" as="style">
-    <link rel="preload" href="/app.js?v=meld1" as="script">
+    <link rel="preload" href="/style.css?v=info1" as="style">
+    <link rel="preload" href="/app.js?v=info1" as="script">
 
     <!-- Stylesheet -->
-    <link rel="stylesheet" href="/style.css?v=meld1">
+    <link rel="stylesheet" href="/style.css?v=info1">
     
     <!-- Scripts -->
-    <script src="/app.js?v=meld1" defer></script>
+    <script src="/app.js?v=info1" defer></script>
 </head>
 
 <body>
@@ -141,6 +141,12 @@
         </div>
 
     </main>
+
+    <!-- Info als overlay; inhoud komt uit /info.html -->
+    <dialog id="info-dialog" class="info-dialog info-page" aria-label="Over ffkwijt en je privacy">
+        <button id="info-close" class="info-close" type="button" aria-label="Sluiten, terug naar het prikbord">&times;</button>
+        <div id="info-dialog-body" class="info-main"></div>
+    </dialog>
 
     <!-- Crisis vangrail modal (113 Zelfmoordpreventie) -->
     <div id="crisis-modal" class="crisis-overlay" role="dialog" aria-modal="true">

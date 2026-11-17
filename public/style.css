@@ -805,6 +805,59 @@ body.info-page {
     padding-left: 20px;
 }
 
+/* Info als overlay boven het prikbord */
+.info-dialog {
+    width: min(760px, 100%);
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    margin: 0 auto;
+    border: none;
+    background: #f4efe8;
+    color: var(--color-charcoal);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: env(safe-area-inset-top, 0px) 24px env(safe-area-inset-bottom, 0px);
+    box-shadow: 0 0 60px rgba(36, 34, 32, 0.25);
+}
+
+.info-dialog::backdrop {
+    background: rgba(36, 34, 32, 0.45);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+.info-dialog .info-main {
+    width: 100%;
+    padding-top: 24px;
+}
+
+.info-close {
+    position: sticky;
+    top: 12px;
+    float: right;
+    width: 44px;
+    height: 44px;
+    margin-top: 12px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(60, 50, 40, 0.08);
+    color: var(--color-charcoal);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 1;
+}
+
+.info-close:hover {
+    color: var(--color-terracotta);
+}
+
+.info-close:focus-visible {
+    outline: 2px solid var(--color-terracotta);
+    outline-offset: 2px;
+}
+
 .info-main li + li {
     margin-top: 12px;
 }
