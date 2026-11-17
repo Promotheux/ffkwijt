@@ -257,7 +257,8 @@ async fn post_vent(
     let text = payload.text.trim();
     eprintln!("Nieuwe vent ontvangen voor analyse");
 
-    if text.is_empty() || text.len() > 280 {
+    // Tekens tellen, geen bytes: é, ë en emoji zijn meerdere bytes in UTF-8
+    if text.is_empty() || text.chars().count() > 280 {
         return (StatusCode::BAD_REQUEST, "Ongeldige tekstlengte").into_response();
     }
 
