@@ -384,6 +384,13 @@ async fn post_vent(
         }
     };
 
+    // Woorden als 'dood' of 'pillen' eerst langs het beheer, ook als het model 'safe' zegt
+    let safety = if safety == "safe" && sanitizer::needs_human_review(text) {
+        "review".to_string()
+    } else {
+        safety
+    };
+
     let initial_status = if safety == "safe" {
         "approved"
     } else {
