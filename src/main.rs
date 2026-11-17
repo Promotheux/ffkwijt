@@ -50,6 +50,40 @@ const POSTS_PER_10_MIN: usize = 5;
 const REPORT_DETAILS_MAX: usize = 500;
 /// Hoe lang meldingen bewaard blijven.
 const REPORT_RETENTION_DAYS: i32 = 180;
+/// Een goedgekeurde gedachte is minstens zo lang zichtbaar.
+const VISIBLE_DAYS: i32 = 90;
+/// Minimaal aantal zichtbare gedachten; zo nodig aangevuld met oudere.
+const MIN_VISIBLE: i64 = 100;
+/// Afgekeurde gedachten worden na zoveel dagen verwijderd.
+const REJECTED_RETENTION_DAYS: i32 = 30;
+
+/// Id's van alle gedachten die op het prikbord staan: alles van de laatste
+/// VISIBLE_DAYS dagen, aangevuld tot MIN_VISIBLE met oudere (meegedragen eerst,
+/// daarna de nieuwste). De feed én het opruimen gebruiken deze ene definitie,
+/// zodat er nooit iets wordt verwijderd dat nog zichtbaar is.
+fn visible_ids_sql() -> String {
+    format!(
+        r#"
+        SELECT id FROM notes
+        WHERE moderation_status = 'approved'
+          AND created_at >= NOW() - make_interval(days => {days})
+        UNION ALL
+        (
+            SELECT id FROM notes
+            WHERE moderation_status = 'approved'
+              AND created_at < NOW() - make_interval(days => {days})
+            ORDER BY (resonances > 0) DESC, created_at DESC
+            LIMIT GREATEST(0, {min} - (
+                SELECT COUNT(*) FROM notes
+                WHERE moderation_status = 'approved'
+                  AND created_at >= NOW() - make_interval(days => {days})
+            ))
+        )
+        "#,
+        days = VISIBLE_DAYS,
+        min = MIN_VISIBLE
+    )
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -121,7 +155,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .and_then(|v| v.parse().ok())
         .unwrap_or(0);
 
-    // Periodiek opruimen: oude meldingen en verlopen rate-limit sleutels
+    // Periodiek opruimen: oude meldingen, gedachten die niet meer zichtbaar zijn,
+    // oude afgekeurde gedachten en verlopen rate-limit sleutels.
+    // Twijfelgevallen ('pending') blijven staan tot het beheer ze bekijkt.
+    let delete_hidden_sql = format!(
+        "WITH visible AS ({}) DELETE FROM notes
+         WHERE moderation_status = 'approved'
+           AND created_at < NOW() - make_interval(days => {})
+           AND id NOT IN (SELECT id FROM visible)",
+        visible_ids_sql(),
+        VISIBLE_DAYS
+    );
     let cleanup_pool = pool.clone();
     let cleanup_limiter = report_limiter.clone();
     let cleanup_post_limiter = post_limiter.clone();
@@ -139,6 +183,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await
             {
                 eprintln!("Fout bij opruimen oude meldingen: {:?}", e);
+            }
+            match sqlx::query(&delete_hidden_sql).execute(&cleanup_pool).await {
+                Ok(r) if r.rows_affected() > 0 => {
+                    println!("Opgeruimd: {} gedachten die niet meer zichtbaar waren", r.rows_affected())
+                }
+                Ok(_) => {}
+                Err(e) => eprintln!("Fout bij opruimen onzichtbare gedachten: {:?}", e),
+            }
+            match sqlx::query(
+                "DELETE FROM notes WHERE moderation_status = 'rejected'
+                 AND COALESCE(reviewed_at, created_at) < NOW() - make_interval(days => $1)",
+            )
+            .bind(REJECTED_RETENTION_DAYS)
+            .execute(&cleanup_pool)
+            .await
+            {
+                Ok(r) if r.rows_affected() > 0 => {
+                    println!("Opgeruimd: {} afgekeurde gedachten", r.rows_affected())
+                }
+                Ok(_) => {}
+                Err(e) => eprintln!("Fout bij opruimen afgekeurde gedachten: {:?}", e),
             }
         }
     });
@@ -190,19 +255,18 @@ async fn get_feed(
     let offset = (page - 1) * limit;
     let seed = params.seed.unwrap_or_else(|| "ffkwijt".to_string());
 
-    let notes = sqlx::query_as::<_, Note>(
+    let sql = format!(
         r#"
-        SELECT id, text, category, valence, resonances, created_at 
-        FROM notes 
-        WHERE moderation_status = 'approved'
-        AND (
-            created_at >= NOW() - INTERVAL '90 days'
-            OR resonances >= 1
-        )
+        WITH visible AS ({})
+        SELECT id, text, category, valence, resonances, created_at
+        FROM notes
+        WHERE id IN (SELECT id FROM visible)
         ORDER BY md5(id::text || $1)
         LIMIT $2 OFFSET $3
         "#,
-    )
+        visible_ids_sql()
+    );
+    let notes = sqlx::query_as::<_, Note>(&sql)
     .bind(seed)
     .bind(limit)
     .bind(offset)
