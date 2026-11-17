@@ -88,6 +88,26 @@ body {
     font-family: var(--font-sans);
 }
 
+/* Prikbord: het puntjespatroon ligt als bovenste laag over de blaadjes
+   (achtergrondkleur → blaadjes → patroon), onder de knoppen en vensters.
+   De infopagina houdt het patroon gewoon op de achtergrond. */
+body:not(.info-page) {
+    background-image: none;
+}
+
+body:not(.info-page)::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 15;
+    pointer-events: none;
+    background-image:
+        radial-gradient(rgba(120, 105, 85, 0.13) 0.8px, transparent 0.8px),
+        radial-gradient(rgba(255, 255, 255, 0.48) 0.8px, transparent 0.8px);
+    background-size: 8px 8px, 8px 8px;
+    background-position: 0 0, 4px 4px;
+}
+
 .top-bar {
     position: fixed;
     top: calc(env(safe-area-inset-top, 0px) + 18px);
