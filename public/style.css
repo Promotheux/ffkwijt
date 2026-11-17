@@ -1013,7 +1013,7 @@ body.info-page {
 }
 
 .info-footer-meta {
-    color: #777;
+    color: var(--color-muted);
 }
 
 /* Melden */
