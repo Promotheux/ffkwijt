@@ -72,7 +72,7 @@ fn visible_ids_sql() -> String {
             SELECT id FROM notes
             WHERE moderation_status = 'approved'
               AND created_at < NOW() - make_interval(days => {days})
-            ORDER BY (resonances > 0) DESC, created_at DESC
+            ORDER BY (resonances > 0) DESC, created_at DESC, id
             LIMIT GREATEST(0, {min} - (
                 SELECT COUNT(*) FROM notes
                 WHERE moderation_status = 'approved'
